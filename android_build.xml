@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="android_build" default="done">
+
+    <property environment="env" />
+    <property name="build_unsigned_file" value="build/outputs/apk/android-release-unsigned.apk"/>
+    <property name="build_signed_file" value="build/outputs/apk/android-release-signed.apk"/>
+    <property name="config_file" value="assets/config.json"/>
+    <property name="ota_file" value="${ota_path}/${build_number_prefix}${env.BUILD_NUMBER}.apk"/>
+    <property name="keystore_path" value="android_keystore.jks"/>
+
+    <target name="clean">
+        <echo>Clean project</echo>
+        <chmod file="gradlew" perm="ugo+x"/>
+        <exec executable="/bin/sh" failonerror="true">
+            <arg value="-c"/>
+            <arg value="./gradlew clean"/>
+        </exec>
+    </target>
+
+    <target name="update" depends="clean">
+        <echo>Update build number</echo>
+        <replace file="${config_file}" token="@BUILD_NUMBER" value="${build_number_prefix}${env.BUILD_NUMBER}"/>
+    </target>
+
+    <target name="build" depends="update">
+        <echo>Build APK</echo>
+        <exec executable="/bin/sh" failonerror="true">
+            <arg value="-c"/>
+            <arg value="./gradlew assembleRelease"/>
+        </exec>
+    </target>
+
+    <target name="sign" depends="build">
+        <echo>Sign APK</echo>
+        <exec executable="jarsigner" failonerror="true">
+            <arg value="-verbose"/>
+            <arg value="-keystore"/>
+            <arg value="${keystore_path}"/>
+            <arg value="-storepass"/>
+            <arg value="your_password"/>
+            <arg value="-signedjar"/>
+            <arg value="${build_signed_file}"/>
+            <arg value="${build_unsigned_file}"/>
+            <arg value="keystore"/>
+        </exec>
+    </target>
+
+    <target name="done" depends="sign">
+        <echo>Move the file to the OTA folder</echo>
+        <copy file="${build_signed_file}" tofile="${ota_file}"/>
+    </target>
+
+</project>
